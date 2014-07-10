@@ -1,0 +1,69 @@
+From ef0736604a327e30568ea97ca07637c7d144544e Mon Sep 17 00:00:00 2001
+From: yugui <yugui@b2dd03c8-39d4-4d8f-98ff-823fe69b080e>
+Date: Wed, 12 Jan 2011 07:26:18 +0000
+Subject: [PATCH] * lib/net/http.rb (Net::HTTP#connect): makes it timeout
+ during   SSL handshake too. [ruby-core:34203]   Patch by Marc Slemko.
+
+* test/net/http/test_http.rb (TestNetHTTP_v1_2#test_timeout_during_HTTP_session):
+  test for [ruby-core:34203]
+
+* test/net/http/test_https.rb (TestNetHTTPS#test_timeout_during_SSL_handshake):
+  ditto.
+
+git-svn-id: svn+ssh://ci.ruby-lang.org/ruby/trunk@30520 b2dd03c8-39d4-4d8f-98ff-823fe69b080e
+---
+ ChangeLog                   | 12 ++++++++++++
+ lib/net/http.rb             | 34 ++++++++++++++++++++--------------
+ test/net/http/test_http.rb  | 19 +++++++++++++++++++
+ test/net/http/test_https.rb | 22 ++++++++++++++++++++++
+ 4 files changed, 73 insertions(+), 14 deletions(-)
+
+diff --git a/lib/net/http.rb b/lib/net/http.rb
+index fac9a0b..c90b202 100644
+--- a/lib/net/http.rb
++++ b/lib/net/http.rb
+@@ -767,21 +767,27 @@ def connect
+       @socket.read_timeout = @read_timeout
+       @socket.debug_output = @debug_output
+       if use_ssl?
+-        if proxy?
+-          @socket.writeline sprintf('CONNECT %s:%s HTTP/%s',
+-                                    @address, @port, HTTPVersion)
+-          @socket.writeline "Host: #{@address}:#{@port}"
+-          if proxy_user
+-            credential = ["#{proxy_user}:#{proxy_pass}"].pack('m')
+-            credential.delete!("\r\n")
+-            @socket.writeline "Proxy-Authorization: Basic #{credential}"
++        begin
++          if proxy?
++            @socket.writeline sprintf('CONNECT %s:%s HTTP/%s',
++                                      @address, @port, HTTPVersion)
++            @socket.writeline "Host: #{@address}:#{@port}"
++            if proxy_user
++              credential = ["#{proxy_user}:#{proxy_pass}"].pack('m')
++              credential.delete!("\r\n")
++              @socket.writeline "Proxy-Authorization: Basic #{credential}"
++            end
++            @socket.writeline ''
++            HTTPResponse.read_new(@socket).value
+           end
+-          @socket.writeline ''
+-          HTTPResponse.read_new(@socket).value
+-        end
+-        s.connect
+-        if @ssl_context.verify_mode != OpenSSL::SSL::VERIFY_NONE
+-          s.post_connection_check(@address)
++          timeout(@open_timeout) { s.connect }
++          if @ssl_context.verify_mode != OpenSSL::SSL::VERIFY_NONE
++            s.post_connection_check(@address)
++          end
++        rescue => exception
++          D "Conn close because of connect error #{exception}"
++          @socket.close if @socket and not @socket.closed?
++          raise exception
+         end
+       end
+       on_connect
+-- 
+1.9.3
+
