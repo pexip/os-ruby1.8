@@ -21,3 +21,4 @@ CVE-2014-8080.patch
 CVE-2014-8090.patch
 no_md5.patch
 http_deadlock.patch
+no_sslv3.patch

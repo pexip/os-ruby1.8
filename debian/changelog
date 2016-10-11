@@ -1,3 +1,11 @@
+ruby1.8 (1.8.7.352-2ubuntu1.6pexip2) pexip; urgency=low
+
+  * Rebuild against libssl1.0.2
+  * debian/patches/no_sslv3.patch:
+    Disable SSLv3 if OpenSSL does not support it.
+
+ -- John-Mark Bell <jmb@pexip.com>  Tue, 11 Oct 2016 22:47:57 +0100
+
 ruby1.8 (1.8.7.352-2ubuntu1.6pexip1) pexip; urgency=low
 
   * New upstream release.
