@@ -1,0 +1,32 @@
+From 6c8a2fe247a93403257fe2af76b67180055069b4 Mon Sep 17 00:00:00 2001
+From: nahi <nahi@b2dd03c8-39d4-4d8f-98ff-823fe69b080e>
+Date: Mon, 25 Jul 2011 04:30:02 +0000
+Subject: [PATCH] * ext/openssl/ossl_ssl.c (ossl_ssl_shutdown): Avoid randomly
+ generated   SSLError from SSLSocket just after invoking SSLSocket#close.  
+ OpenSSL's SSL_shutdown could try to send alert packet and it might   set
+ SSLerr(global error stack) as the result. It causes the next   SSL read/write
+ operation to fail by unrelated reason.
+
+  By design, we're ignoring any error at SSL_shutdown() so we clear
+  global error stack after SSL_shutdown is called. See #5039.
+
+
+git-svn-id: svn+ssh://ci.ruby-lang.org/ruby/trunk@32658 b2dd03c8-39d4-4d8f-98ff-823fe69b080e
+---
+ ChangeLog              | 11 +++++++++++
+ ext/openssl/ossl_ssl.c |  3 ++-
+ 2 files changed, 13 insertions(+), 1 deletion(-)
+
+[jmb]: backport to 1.8
+diff --git a/ext/openssl/ossl_ssl.c b/ext/openssl/ossl_ssl.c
+index a17cb02..aa09098 100644
+--- a/ext/openssl/ossl_ssl.c
++++ b/ext/openssl/ossl_ssl.c
+@@ -845,6 +845,7 @@ ossl_ssl_shutdown(SSL *ssl)
+ {
+     if (ssl) {
+         SSL_shutdown(ssl);
++        ERR_clear_error();
+         SSL_clear(ssl);
+     }
+ }
